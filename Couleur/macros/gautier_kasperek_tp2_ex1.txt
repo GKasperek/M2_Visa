@@ -1,0 +1,131 @@
+// TP 2 Segmentation par Kmeans
+// Gautier Kasperek
+// 11/20/2019
+
+macro "tp2_segmentation"{
+
+	// Parametre la macro, nombre de classes et affichages du 3D Inspector
+	nbClusters =  getNumber ("Choisissez le nombre de classes pour le clustering k-means.",4);
+
+	espaces = newArray("RGB", "HSB");
+	ouiOuNon = newArray("Oui","Non");
+
+	// Choix de l'espace RGB ou HSB
+	Dialog.create("Espace couleur");
+	Dialog.addMessage("Choisir : ");
+	Dialog.addChoice("Choix", espaces);
+	Dialog.show();
+
+	espaceChoisi = Dialog.getChoice();
+
+	Dialog.create("Afficher 3D Inspector ?");
+	Dialog.addMessage("Afficher 3D Inspector ?");
+	Dialog.addChoice("Choix", ouiOuNon);
+	Dialog.show();
+	inspector = Dialog.getChoice();
+
+	// Ouvre l'image d'apprentissage
+	open();
+	image = getTitle();
+	W = getWidth();
+	H = getHeight();
+
+	// Applique une transformation vers HSB si besoin
+	if(espaceChoisi == "HSB"){
+		run("Color Space Converter", "from=RGB to=HSB white=D65");
+	}
+
+	// Applique k-means sur l'image d'apprentissage
+	run("k-means Clustering", "number="+nbClusters+" cluster=0.00010000 enable randomization=48 show");
+
+	// Compte les centroides trouvés dans l'image résultat de k-means
+	clusters = newArray(nbClusters);
+	clFound = 0;
+	selectWindow("Cluster centroid values");
+
+	for(i = 0; i < H; i++){
+  		for( j = 0; j< W; j++){
+			// Si l'on a deja trouve autant de centroide que voulu on s'arrete
+			if(nbClusters == clFound) break;
+
+			// Recupere la valeur du pixel i j et verifie qu'il n'est pas dejz� trouvee
+			pixel = getPixel(i,j);
+			found = false;
+
+			// On compare le pixel courrant avec tout les clusters trouves
+			for(c = 0; c < nbClusters; c++){
+				if(pixel == clusters[c]) found = true;
+			}
+
+			// Si la valeur du centroide n'est pas deja trouve on l'ajoute
+			if(!found){
+				//print(pixel);
+				clusters[clFound] = pixel;
+				clFound++;
+			}
+		}
+		
+	}
+
+	// Ouvre l'inspector 3D si voulu par l'utilisateur
+	if(inspector == "Oui"){
+		run("Color Inspector 3D");
+	}
+
+	// Ouvre l'image a traiter
+	open();
+
+	// Applique une transformation vers HSB si besoin
+	if(espaceChoisi == "HSB"){
+		run("Color Space Converter", "from=RGB to=HSB white=D65");
+	}
+	image = getTitle();
+	selectWindow(image);
+	W = getWidth();
+	H = getHeight();
+
+	// Pour chaque pixel
+	for(i = 0; i < H; i++){
+		for( j = 0; j< W; j++){
+				// Recupere la valeur du pixel j i
+				pixel = getPixel(j,i);
+				min = clusters[0];
+
+				// Calcule la plus petite distance euclidienne entre le pixel et chaque centroide
+				mindist = distance(clusters[0], pixel);
+				for(c = 1; c < nbClusters; c++){
+					if(mindist > distance(clusters[c], pixel)){
+						mindist = distance(clusters[c], pixel);
+	 					min = clusters[c];
+					}
+				}
+
+				// Applique la valeur du centroide le plus proche au pixel courrant
+				setPixel(j,i,min);
+
+  		}
+	}
+
+	// Ouvre l'inspector 3D si voulu par l'utilisateur
+	if(inspector == "Oui"){
+		run("Color Inspector 3D");
+	}
+
+
+	/**
+	 *  Calcule la distance Euclidienne entre deux pixels
+	  * nomImage : chaine de caractere de l'image a traiter
+	 */
+	function distance(p1, p2){
+		Rp1 = (p1 & 0xff0000) >> 16;
+		Gp1 = (p1 & 0x00ff00) >> 8;
+		Bp1 = (p1 & 0x0000ff) ;
+
+		Rp2 = (p2 & 0xff0000) >> 16;
+		Gp2 = (p2 & 0x00ff00) >> 8;
+		Bp2 = (p2 & 0x0000ff) ;
+
+		return sqrt((pow(Rp2 - Rp1,2))+(pow(Gp2 - Gp1,2))+(pow(Bp2 - Bp1,2)));
+	}
+
+}

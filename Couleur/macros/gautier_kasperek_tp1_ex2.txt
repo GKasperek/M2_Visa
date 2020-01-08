@@ -1,0 +1,38 @@
+// Extract cas 2
+// Date 07/11/2019
+// Gautier Kasperek
+ 
+macro "gautier_kasperek_tp1_ex2" {
+	open();
+	// recuperation du titre de l'image
+	image = getTitle();
+
+	Dialog.create("Debut");
+	Dialog.addMessage(" Cliquer sur OK pour commencer le traitement ");
+	Dialog.show();
+
+	// Sépare les canaux rouge, vert et bleu
+	run("Split Channels");
+
+	// Ferme les canaux bleu et vert (non utilisé)
+	selectWindow(image + " (blue)");
+	close();
+	selectWindow(image + " (green)");
+	close();
+
+	// Selectionne le canal rouge
+	selectWindow(image + " (red)");
+
+	// Seuil le canal rouge
+	setAutoThreshold("Default");
+	setThreshold(127, 217);
+	setOption("BlackBackground", false);
+	run("Convert to Mask");
+
+	setBatchMode(false);
+
+	Dialog.create("Fin");
+	Dialog.addMessage(" Cliquer sur OK pour terminer le traitement");
+	Dialog.show();
+
+}

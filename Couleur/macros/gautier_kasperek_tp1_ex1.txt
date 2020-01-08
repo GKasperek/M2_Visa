@@ -1,0 +1,37 @@
+// Extract cas 1
+// Date 07/11/2019
+// Gautier Kasperek
+ 
+macro "gautier_kasperek_tp1_ex1" {
+	open();
+	// recuperation du titre de l'image
+	image = getTitle();
+
+	Dialog.create("Debut");
+	Dialog.addMessage(" Cliquer sur OK pour commencer le traitement ");
+	Dialog.show();
+
+	// Converti du domaine RGB au domaine Lab et sépare les canaux 
+	run("Color Space Converter", "from=RGB to=LAB white=D65 separate");
+
+	// Ferme les canaux L et b (non utilisé)
+	selectWindow(image + " (L*)");
+	close();
+	selectWindow(image + " (b*)");
+	close();
+
+	// Selectionne le canal a
+	selectWindow(image + " (a*)");
+
+	// Seuil les valeurs du canal a
+	setAutoThreshold("Default");
+	setOption("BlackBackground", false);
+	run("Convert to Mask");
+
+	setBatchMode(false);
+
+	Dialog.create("Fin");
+	Dialog.addMessage(" Cliquer sur OK pour terminer le traitement");
+	Dialog.show();
+
+}

@@ -1,0 +1,146 @@
+// TP 2 Segmentation par Kmeans avec PCA
+// Gautier Kasperek
+// 11/20/2019
+
+macro "tp2_segmentation_pca"{
+	
+	// Parametre la macro, nombre de classes et affichages du 3D Inspector
+	nbClusters =  getNumber ("Choisissez le nombre de classes pour le clustering k-means.",4);
+
+	ouiOuNon = newArray("Oui","Non");
+
+	Dialog.create("Afficher 3D Inspector ?");
+	Dialog.addMessage("Afficher 3D Inspector ?");
+	Dialog.addChoice("Choix", ouiOuNon);
+	Dialog.show();
+	inspector = Dialog.getChoice();
+
+	// Ouvre l'image d'apprentissage et applique la methode PCA(nomImage)
+	open();
+	image = getTitle();
+	appliquePCA(image);
+	
+	
+	W = getWidth();
+	H = getHeight();
+	
+	// Applique k-means sur l'image d'apprentissage après PCA
+	run("k-means Clustering", "number="+nbClusters+" cluster=0.00010000 enable randomization=48 show");
+
+	// Compte les centroides trouvés dans l'image résultat de k-means
+	clusters = newArray(nbClusters);
+	clFound = 0;
+	selectWindow("Cluster centroid values");
+	
+	// Pour chaque pixel
+	for(i = 0; i < H; i++){
+  		for( j = 0; j< W; j++){
+			// Recupere la valeur du pixel i j et verifie qu'il n'est pas deja  trouvee
+			pixel = getPixel(i,j);
+			found = false;
+
+			// On compare le pixel courrant avec tout les clusters trouves
+			for(c = 0; c < nbClusters; c++){
+				if(pixel == clusters[c]) found = true;
+			}
+			
+			// Si la valeur du centroide n'est pas deja trouve on l'ajoute au tableau des centroide
+			if(!found){
+				//print(pixel);	
+				clusters[clFound] = pixel;
+				clFound++;
+			}
+		}
+		// Si l'on a deja trouve autant de centroide que voulu on s'arrete
+		if(nbClusters == clFound) break;
+	}
+	
+	// Ouvre l'inspector 3D si voulu par l'utilisateur
+	if(inspector == "Oui"){
+		run("Color Inspector 3D");
+	}
+
+
+	// Ouvre l'image a traiter
+	open();
+
+	imageDeux = getTitle();
+
+	// On applique le PCA sur l'image a traiter
+	appliquePCA(imageDeux);
+	W = getWidth();
+	H = getHeight();
+	
+	// Pour chaque pixel
+	for(i = 0; i < H; i++){
+		for( j = 0; j< W; j++){
+		
+			// Recupere la valeur du pixel j i
+			pixel = getPixel(j,i);
+			min = clusters[0];
+
+			// Calcule la plus petite distance euclidienne entre le pixel et chaque centroide
+			mindist = distance(clusters[0], pixel);
+			for(c = 1; c < nbClusters; c++){
+				if(mindist > distance(clusters[c], pixel)){
+					mindist = distance(clusters[c], pixel);
+ 					min = clusters[c];
+				}
+			}
+			
+			// Applique la valeur du centroide le plus proche au pixel courrant
+			setPixel(j,i,min);
+
+  		}
+	}
+
+	// Ouvre l'inspector 3D si voulu par l'utilisateur
+	if(inspector == "Oui"){
+		run("Color Inspector 3D");
+	}
+
+	/**
+	 *  Applique le PCA de l'image
+	  * nomImage : chaine de caractere de l'image a traiter
+	 */
+	function appliquePCA(nomImage){
+		selectWindow(nomImage);
+
+		// Separe les canaux rgb et les regroupent dans un stack
+		run("Split Channels");
+		selectWindow(nomImage + " (red)");
+		selectWindow(nomImage + " (green)");
+		selectWindow(nomImage + " (blue)");
+		run("Images to Stack", "name=Stack title="+ nomImage +" use");
+		
+		rename("Stack of " + nomImage);
+	
+		
+		// Applique le PCA sur la stack courrante		
+		run("PCA ");
+		selectWindow("PCA of Stack of " + nomImage);
+		
+		// Convertit la stack en 8-BIT puis transforme la stack en image au format rgb
+		run("8-bit");
+		run("Stack to RGB");
+		selectWindow("Eigenvalue spectrum of Stack");
+		close();
+	}
+
+	/**
+	 *  Calcule la distance Euclidienne entre deux pixels
+	  * nomImage : chaine de caractere de l'image a traiter
+	 */
+	function distance(p1, p2){
+		Rp1 = (p1 & 0xff0000) >> 16;
+		Gp1 = (p1 & 0x00ff00) >> 8;
+		Bp1 = (p1 & 0x0000ff) ;
+
+		Rp2 = (p2 & 0xff0000) >> 16;
+		Gp2 = (p2 & 0x00ff00) >> 8;
+		Bp2 = (p2 & 0x0000ff) ;
+
+		return sqrt((pow(Rp2 - Rp1,2))+(pow(Gp2 - Gp1,2))+(pow(Bp2 - Bp1,2)));
+	}
+
+}
